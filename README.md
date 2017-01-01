@@ -26,7 +26,7 @@ dependencies {
 
 ## Usage
 
-创建一个 `RxPermissions`实例  :
+创建一个 `RxFingerPrinter`实例  :
 
 ```java
 RxFingerPrinter rxFingerPrinter = new RxFingerPrinter(this); // where this is an Activity instance
@@ -73,7 +73,7 @@ Subscription subscription =
         rxfingerPrinter.unSubscribe(this);
     }
 ```
-用FPerException封装了一下指纹识别时可能出现的异常，可以在订阅的Subscriber中获取该异常
+用FPerException封装了一下指纹识别时可能出现的异常，可以在订阅的Subscriber的`onError(Throwable e)`中获取该异常
 ```java
 @Override
       public void onError(Throwable e) {
