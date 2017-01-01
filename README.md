@@ -73,3 +73,32 @@ Subscription subscription =
         rxfingerPrinter.unSubscribe(this);
     }
 ```
+用FPerException封装了一下指纹识别时可能出现的异常，可以在订阅的Subscriber中获取该异常
+```java
+@Override
+      public void onError(Throwable e) {
+          if(e instanceof FPerException){判断该异常是否为FPerException
+            Toast.makeText(MainActivity.this,((FPerException) e).getDisplayMessage(),Toast.LENGTH_SHORT).show();
+         }
+```
+可以根据```java((FPerException) e).getCode() ```来获取对应的错误码，也可以直接调用```((FPerException) e).getDisplayMessage()```提示默认的错误信息。
+```java
+public String getDisplayMessage() {
+        switch (code) {
+            case SYSTEM_API_ERROR:
+                return "系统API小于23";
+            case PERMISSION_DENIED_ERROE:
+                return "没有指纹识别权限";
+            case HARDWARE_MISSIING_ERROR:
+                return "没有指纹识别模块";
+            case KEYGUARDSECURE_MISSIING_ERROR:
+                return "没有开启锁屏密码";
+            case NO_FINGERPRINTERS_ENROOLED_ERROR:
+                return "没有指纹录入";
+            case FINGERPRINTERS_FAILED_ERROR:
+                return "指纹认证失败";
+            default:
+                return "";
+        }
+    }
+ ```
