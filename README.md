@@ -4,6 +4,8 @@
 
 用rxjava简单封装了指纹识别，顺便撸了一个指纹控件
 
+![image](https://github.com/Zweihui/RxFingerPrinter/blob/master/gif/ScreenShot.gif)
+
 ## Setup
 
 测试机型推荐android版本6.0以上且具有指纹模块。
