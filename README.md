@@ -77,11 +77,11 @@ Subscription subscription =
 ```java
 @Override
       public void onError(Throwable e) {
-          if(e instanceof FPerException){判断该异常是否为FPerException
+          if(e instanceof FPerException){//判断该异常是否为FPerException
             Toast.makeText(MainActivity.this,((FPerException) e).getDisplayMessage(),Toast.LENGTH_SHORT).show();
          }
 ```
-可以根据```java((FPerException) e).getCode() ```来获取对应的错误码，也可以直接调用```((FPerException) e).getDisplayMessage()```提示默认的错误信息。
+可以根据```((FPerException) e).getCode() ```来获取对应的错误码，也可以直接调用```((FPerException) e).getDisplayMessage()```提示默认的错误信息。
 ```java
 public String getDisplayMessage() {
         switch (code) {
