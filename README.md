@@ -60,7 +60,7 @@ Subscription subscription =
         }
       }
     });
-    rxfingerPrinter.addSubscription(this,ubs); //不要忘记把订阅返回的subscription添加到rxfingerPrinter里
+    rxfingerPrinter.addSubscription(this,subscription); //不要忘记把订阅返回的subscription添加到rxfingerPrinter里
 ```
 
  在onDestroy方法中执行取消订阅
