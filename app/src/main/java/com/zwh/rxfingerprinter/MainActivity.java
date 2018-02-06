@@ -12,7 +12,6 @@ import zwh.com.lib.RxFingerPrinter;
 public class MainActivity extends AppCompatActivity {
 
     private FingerPrinterView fingerPrinterView;
-    private int fingerErrorNum = 0; // 指纹错误次数
     RxFingerPrinter rxfingerPrinter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,11 +21,10 @@ public class MainActivity extends AppCompatActivity {
         fingerPrinterView.setOnStateChangedListener(new FingerPrinterView.OnStateChangedListener() {
             @Override public void onChange(int state) {
                 if (state == FingerPrinterView.STATE_CORRECT_PWD) {
-                    fingerErrorNum = 0;
                     Toast.makeText(MainActivity.this, "指纹识别成功", Toast.LENGTH_SHORT).show();
                 }
                 if (state == FingerPrinterView.STATE_WRONG_PWD) {
-                    Toast.makeText(MainActivity.this, "指纹识别失败，还剩" + (5-fingerErrorNum) + "次机会",
+                    Toast.makeText(MainActivity.this, "指纹识别失败，请重试",
                             Toast.LENGTH_SHORT).show();
                     fingerPrinterView.setState(FingerPrinterView.STATE_NO_SCANING);
                 }
@@ -37,7 +35,6 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_open).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                fingerErrorNum = 0;
                 DisposableObserver<Boolean> observer = new DisposableObserver<Boolean>() {
 
                     @Override
@@ -69,7 +66,6 @@ public class MainActivity extends AppCompatActivity {
                         if(aBoolean){
                             fingerPrinterView.setState(FingerPrinterView.STATE_CORRECT_PWD);
                         }else{
-                            fingerErrorNum++;
                             fingerPrinterView.setState(FingerPrinterView.STATE_WRONG_PWD);
                         }
                     }
