@@ -18,9 +18,11 @@ repositories {
 }
 ```
 在Module中build.gradle中配置 :
+
+[ ![Download](https://api.bintray.com/packages/zhangweihui0503/maven/RxFingerPrinter/images/download.svg?version=1.1.0) ](https://bintray.com/zhangweihui0503/maven/RxFingerPrinter/1.1.0/link)
 ```gradle
 dependencies {
-    compile  'com.zwh:RxFingerPrinter:1.0.1'
+    compile  'com.zwh:RxFingerPrinter:1.1.0'
 }
 ```
 
