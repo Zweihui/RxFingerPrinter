@@ -1,12 +1,11 @@
 package com.zwh.rxfingerprinter;
 
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Toast;
 
-import rx.Subscriber;
-import rx.Subscription;
+import io.reactivex.observers.DisposableObserver;
 import zwh.com.lib.FPerException;
 import zwh.com.lib.RxFingerPrinter;
 
@@ -34,15 +33,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         rxfingerPrinter = new RxFingerPrinter(this);
+        rxfingerPrinter.setLogging(BuildConfig.DEBUG);
         findViewById(R.id.btn_open).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 fingerErrorNum = 0;
-                rxfingerPrinter.unSubscribe(this);
-                Subscription subscription = rxfingerPrinter.begin().subscribe(new Subscriber<Boolean>() {
+                DisposableObserver<Boolean> observer = new DisposableObserver<Boolean>() {
+
                     @Override
-                    public void onStart() {
-                        super.onStart();
+                    protected void onStart() {
                         if (fingerPrinterView.getState() == FingerPrinterView.STATE_SCANING) {
                             return;
                         } else if (fingerPrinterView.getState() == FingerPrinterView.STATE_CORRECT_PWD
@@ -54,15 +53,15 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onCompleted() {
-
-                    }
-
-                    @Override
                     public void onError(Throwable e) {
                         if(e instanceof FPerException){
                             Toast.makeText(MainActivity.this,((FPerException) e).getDisplayMessage(),Toast.LENGTH_SHORT).show();
                         }
+                    }
+
+                    @Override
+                    public void onComplete() {
+
                     }
 
                     @Override
@@ -74,15 +73,11 @@ public class MainActivity extends AppCompatActivity {
                             fingerPrinterView.setState(FingerPrinterView.STATE_WRONG_PWD);
                         }
                     }
-                });
-                rxfingerPrinter.addSubscription(this,subscription);
+                };
+                rxfingerPrinter.dispose();
+                rxfingerPrinter.begin().subscribe(observer);
+                rxfingerPrinter.addDispose(observer);
             }
         });
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        rxfingerPrinter.unSubscribe(this);
     }
 }

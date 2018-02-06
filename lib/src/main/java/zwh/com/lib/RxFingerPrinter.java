@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.FragmentManager;
 import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -12,19 +13,14 @@ import android.os.Build;
 import android.os.CancellationSignal;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.telecom.Call;
-import android.widget.Toast;
+import android.util.Log;
 
-import java.util.HashMap;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.subjects.PublishSubject;
+import zwh.com.lib.lifecycle.LifecycleListener;
+import zwh.com.lib.lifecycle.SupportFingerPrinterManagerFragment;
 
-import rx.Observable;
-import rx.Subscriber;
-import rx.Subscription;
-import rx.functions.Action0;
-import rx.subjects.PublishSubject;
-import rx.subscriptions.CompositeSubscription;
-
-import static android.icu.text.RelativeDateTimeFormatter.Direction.THIS;
 import static zwh.com.lib.CodeException.FINGERPRINTERS_FAILED_ERROR;
 import static zwh.com.lib.CodeException.HARDWARE_MISSIING_ERROR;
 import static zwh.com.lib.CodeException.KEYGUARDSECURE_MISSIING_ERROR;
@@ -36,30 +32,54 @@ import static zwh.com.lib.CodeException.SYSTEM_API_ERROR;
  * Created by Administrator on 2016/12/31.
  */
 
-public class RxFingerPrinter {
+public class RxFingerPrinter implements LifecycleListener {
     static final String TAG = "RxFingerPrinter";
     private FingerprintManager manager;
     private KeyguardManager mKeyManager;
-    private Context context;
-    private HashMap<String, CompositeSubscription> mSubscriptionMap;
+    private Activity context;
     PublishSubject<Boolean> publishSubject;
+    SupportFingerPrinterManagerFragment supportFingerPrinterManagerFragment;
     @SuppressLint("NewApi")
     CancellationSignal mCancellationSignal;
     @SuppressLint("NewApi")
-    FingerprintManager.AuthenticationCallback mSelfCancelled;
+    FingerprintManager.AuthenticationCallback authenticationCallback;
+    private boolean mLogging;
+    private boolean mSelfCompleted;
+    private CompositeDisposable mDisposables = new CompositeDisposable();
 
-    public RxFingerPrinter(@NonNull Context context) {
-        this.context = context;
+    public RxFingerPrinter(@NonNull Activity activity) {
+        this.context = activity;
+        supportFingerPrinterManagerFragment = getRxPermissionsFragment(activity);
+    }
+
+    private SupportFingerPrinterManagerFragment getRxPermissionsFragment(Activity activity) {
+        SupportFingerPrinterManagerFragment fragment = findRxPermissionsFragment(activity);
+        boolean isNewInstance = fragment == null;
+        if (isNewInstance) {
+            fragment = new SupportFingerPrinterManagerFragment();
+            FragmentManager fragmentManager = activity.getFragmentManager();
+            fragmentManager
+                    .beginTransaction()
+                    .add(fragment, TAG)
+                    .commitAllowingStateLoss();
+            fragmentManager.executePendingTransactions();
+            fragment.getLifecycle().addListener(this);
+        }
+        return fragment;
+    }
+
+    private SupportFingerPrinterManagerFragment findRxPermissionsFragment(Activity activity) {
+        return (SupportFingerPrinterManagerFragment) activity.getFragmentManager().findFragmentByTag(TAG);
     }
 
     public PublishSubject<Boolean> begin() {
 
-        if(publishSubject == null){
+        if (publishSubject == null) {
             publishSubject = PublishSubject.create();
         }
-        if (Build.VERSION.SDK_INT < 23){
+        if (Build.VERSION.SDK_INT < 23) {
             publishSubject.onError(new FPerException(SYSTEM_API_ERROR));
-        }else {
+        } else {
             initManager();
             confirmFinger();
             startListening(null);
@@ -67,27 +87,33 @@ public class RxFingerPrinter {
         return publishSubject;
 
     }
+
     @TargetApi(Build.VERSION_CODES.M)
     public void startListening(FingerprintManager.CryptoObject cryptoObject) {
-        //android studio 上，没有这个会报错
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.USE_FINGERPRINT)
                 != PackageManager.PERMISSION_GRANTED) {
-            throw new FPerException(PERMISSION_DENIED_ERROE);
+            publishSubject.onError(new FPerException(PERMISSION_DENIED_ERROE));
         }
-        manager.authenticate(cryptoObject, null, 0, mSelfCancelled, null);
+        mCancellationSignal = new CancellationSignal();
+        if (manager != null && authenticationCallback != null) {
+            mSelfCompleted = false;
+            manager.authenticate(cryptoObject, mCancellationSignal, 0, authenticationCallback, null);
+        }
     }
 
     @TargetApi(Build.VERSION_CODES.M)
     private void initManager() {
-        mCancellationSignal = new CancellationSignal();
-        manager = (FingerprintManager) context.getSystemService(Context.FINGERPRINT_SERVICE);
+        manager = context.getSystemService(FingerprintManager.class);
         mKeyManager = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
-        mSelfCancelled = new FingerprintManager.AuthenticationCallback() {
+        authenticationCallback = new FingerprintManager.AuthenticationCallback() {
             @Override
             public void onAuthenticationError(int errorCode, CharSequence errString) {
                 //多次指纹密码验证错误后，进入此方法；并且，不能短时间内调用指纹验证
-                publishSubject.onError(new FPerException(FINGERPRINTERS_FAILED_ERROR));
-                mCancellationSignal.cancel();
+                if (mCancellationSignal!=null){
+                    publishSubject.onError(new FPerException(FINGERPRINTERS_FAILED_ERROR));
+                    mCancellationSignal.cancel();
+                    mSelfCompleted = true;
+                }
             }
 
             @Override
@@ -98,7 +124,7 @@ public class RxFingerPrinter {
             @Override
             public void onAuthenticationSucceeded(FingerprintManager.AuthenticationResult result) {
                 publishSubject.onNext(true);
-
+                mSelfCompleted = true;
             }
 
             @Override
@@ -133,55 +159,64 @@ public class RxFingerPrinter {
 
     }
 
-    public Observable.Transformer<Object, Boolean> ensure() {
-        return new Observable.Transformer<Object, Boolean>() {
-
-            @Override
-            public Observable<Boolean> call(Observable<Object> o) {
-                return null;
-            }
-        };
+    public void addDispose(Disposable disposable) {
+        mDisposables.add(disposable);
     }
 
-
-    /**
-     * 保存订阅后的subscription
-     * @param o
-     * @param subscription
-     */
-    public void addSubscription(Object o, Subscription subscription) {
-        if (mSubscriptionMap == null) {
-            mSubscriptionMap = new HashMap<>();
-        }
-        String key = o.getClass().getName();
-        if (mSubscriptionMap.get(key) != null) {
-            mSubscriptionMap.get(key).add(subscription);
-        } else {
-            CompositeSubscription compositeSubscription = new CompositeSubscription();
-            compositeSubscription.add(subscription);
-            mSubscriptionMap.put(key, compositeSubscription);
+    public void dispose() {
+        if(mDisposables.isDisposed()){
+            mDisposables.dispose();
         }
     }
 
 
-    /**
-     * 取消订阅
-     * @param o
-     */
-    public void unSubscribe(Object o) {
-        if (mSubscriptionMap == null) {
-            return;
-        }
 
-        String key = o.getClass().getName();
-        if (!mSubscriptionMap.containsKey(key)){
-            return;
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    public void stopListening() {
+        if (mCancellationSignal != null) {
+            mCancellationSignal.cancel();
+            mCancellationSignal = null;
         }
-        if (mSubscriptionMap.get(key) != null) {
-            mSubscriptionMap.get(key).unsubscribe();
-        }
+    }
 
-        mSubscriptionMap.remove(key);
+    @Override
+    public void onStart() {
+        log("LifeCycle--------onStart");
+    }
+
+    @Override
+    public void onStop() {
+        log("LifeCycle--------onStop");
+    }
+
+    @Override
+    public void onResume() {
+        if (!mSelfCompleted){
+            startListening(null);
+        }
+        log("LifeCycle--------onResume");
+    }
+
+    @Override
+    public void onPause() {
+        stopListening();
+        log("LifeCycle--------onPause");
+    }
+
+    @Override
+    public void onDestroy() {
+        dispose();
+        log("LifeCycle--------onDestroy");
+    }
+
+    public void setLogging(boolean logging) {
+        mLogging = logging;
+    }
+
+    void log(String message) {
+        if (mLogging) {
+            Log.d(TAG, message);
+        }
     }
 
 }
