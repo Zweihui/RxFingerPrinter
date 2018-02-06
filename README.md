@@ -2,7 +2,7 @@
 
 [![Build Status](https://api.travis-ci.org/tbruyelle/RxPermissions.svg?branch=master)](https://travis-ci.org/tbruyelle/RxPermissions)
 
-用rxjava简单封装了指纹识别，顺便撸了一个指纹控件
+用rxjava封装了指纹识别，并实现类似Glide生命周期绑定，顺便撸了一个指纹控件。
 
 ![image](https://github.com/Zweihui/RxFingerPrinter/blob/master/gif/ScreenShot.gif)
 
@@ -35,50 +35,46 @@ RxFingerPrinter rxFingerPrinter = new RxFingerPrinter(this); // where this is an
 
 ```java
 // 可以在oncreat方法中执行
-Subscription subscription =
-     rxFingerPrinter
-    .begin()
-    .subscribe(new Subscriber<Boolean>() {
-      @Override
-      public void onCompleted() {
+DisposableObserver<Boolean> observer = new DisposableObserver<Boolean>() {
 
-      }
+                    @Override
+                    protected void onStart() {
+                        
+                    }
 
-      @Override
-      public void onError(Throwable e) {
-          if(e instanceof FPerException){
-            Toast.makeText(MainActivity.this,((FPerException) e).getDisplayMessage(),Toast.LENGTH_SHORT).show();
-         }
-      }
+                    @Override
+                    public void onError(Throwable e) {
+                        //处理错误信息
+                        if(e instanceof FPerException){
+                            Toast.makeText(MainActivity.this,((FPerException) e).getDisplayMessage(),Toast.LENGTH_SHORT).show();
+                        }
+                    }
 
-      @Override
-      public void onNext(Boolean aBoolean) {
-        if (aBoolean){
-          Toast.makeText(MainActivity.this, "指纹识别成功", Toast.LENGTH_SHORT).show();
-        }else {
-          Toast.makeText(MainActivity.this, "指纹识别失败", Toast.LENGTH_SHORT).show();
-        }
-      }
-    });
-    rxfingerPrinter.addSubscription(this,subscription); //不要忘记把订阅返回的subscription添加到rxfingerPrinter里
+                    @Override
+                    public void onComplete() {
+
+                    }
+
+                    @Override
+                    public void onNext(Boolean aBoolean) {
+                        if(aBoolean){
+                            //指纹验证成功
+                        }else{
+                            //指纹验证失败
+                        }
+                    }
+                };
+                rxfingerPrinter.begin().subscribe(observer);
+                rxfingerPrinter.addDispose(observer);//由RxfingerPrinter管理(会在onDestroy()生命周期时自动解除绑定)
 ```
 
- 在onDestroy方法中执行取消订阅
- 
-```java
-//
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        rxfingerPrinter.unSubscribe(this);
-    }
-```
+
 用FPerException封装了一下指纹识别时可能出现的异常，可以在订阅的Subscriber的`onError(Throwable e)`中获取该异常
 ```java
 @Override
       public void onError(Throwable e) {
-          if(e instanceof FPerException){//判断该异常是否为FPerException
-            Toast.makeText(MainActivity.this,((FPerException) e).getDisplayMessage(),Toast.LENGTH_SHORT).show();
+          if(e instanceof FPerException){//判断该异常是否为FPerException
+            Toast.makeText(MainActivity.this,((FPerException) e).getDisplayMessage(),Toast.LENGTH_SHORT).show();
          }
 ```
 可以根据```((FPerException) e).getCode() ```来获取对应的错误码，也可以直接调用```((FPerException) e).getDisplayMessage()```提示默认的错误信息。
