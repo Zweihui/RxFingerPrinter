@@ -66,7 +66,7 @@ DisposableObserver<Boolean> observer = new DisposableObserver<Boolean>() {
                         }
                     }
                 };
-                rxfingerPrinter.begin().subscribe(observer);
+                rxfingerPrinter.begin().subscribe(observer);//RxfingerPrinter会在onPause()时暂停指纹监听，onResume()时恢复指纹监听)
                 rxfingerPrinter.addDispose(observer);//由RxfingerPrinter管理(会在onDestroy()生命周期时自动解除绑定)
 ```
 
@@ -104,7 +104,7 @@ public String getDisplayMessage() {
  
  ## License
 ``` 
- Copyright 2016, Zweihui 
+ Copyright 2018, Zweihui 
   
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
