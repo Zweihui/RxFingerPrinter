@@ -2,7 +2,7 @@
 
 [![Build Status](https://api.travis-ci.org/tbruyelle/RxPermissions.svg?branch=master)](https://travis-ci.org/tbruyelle/RxPermissions)
 
-用rxjava封装了指纹识别，并实现类似Glide生命周期绑定，顺便撸了一个指纹控件。
+用rxjava封装了指纹识别，并实现对生命周期的自动绑定，顺便撸了一个指纹控件。
 
 ![image](https://github.com/Zweihui/RxFingerPrinter/blob/master/gif/ScreenShot.gif)
 
