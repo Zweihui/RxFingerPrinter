@@ -48,7 +48,7 @@ public class FPerException extends RuntimeException {
             case NO_FINGERPRINTERS_ENROOLED_ERROR:
                 return "没有指纹录入";
             case FINGERPRINTERS_FAILED_ERROR:
-                return "指纹认证失败";
+                return "指纹认证失败，请稍后再试";
             default:
                 return "";
         }

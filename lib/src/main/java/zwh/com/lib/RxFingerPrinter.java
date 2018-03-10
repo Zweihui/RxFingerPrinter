@@ -73,10 +73,8 @@ public class RxFingerPrinter implements LifecycleListener {
     }
 
     public PublishSubject<Boolean> begin() {
-
-        if (publishSubject == null) {
-            publishSubject = PublishSubject.create();
-        }
+        dispose();
+        publishSubject = PublishSubject.create();
         if (Build.VERSION.SDK_INT < 23) {
             publishSubject.onError(new FPerException(SYSTEM_API_ERROR));
         } else {
