@@ -22,6 +22,7 @@ import zwh.com.lib.lifecycle.LifecycleListener;
 import zwh.com.lib.lifecycle.SupportFingerPrinterManagerFragment;
 
 import static zwh.com.lib.CodeException.FINGERPRINTERS_FAILED_ERROR;
+import static zwh.com.lib.CodeException.FINGERPRINTERS_RECOGNIZE_FAILED;
 import static zwh.com.lib.CodeException.HARDWARE_MISSIING_ERROR;
 import static zwh.com.lib.CodeException.KEYGUARDSECURE_MISSIING_ERROR;
 import static zwh.com.lib.CodeException.NO_FINGERPRINTERS_ENROOLED_ERROR;
@@ -37,7 +38,7 @@ public class RxFingerPrinter implements LifecycleListener {
     private FingerprintManager manager;
     private KeyguardManager mKeyManager;
     private Activity context;
-    PublishSubject<Boolean> publishSubject;
+    PublishSubject<IdentificationInfo> publishSubject;
     SupportFingerPrinterManagerFragment supportFingerPrinterManagerFragment;
     @SuppressLint("NewApi")
     CancellationSignal mCancellationSignal;
@@ -72,11 +73,11 @@ public class RxFingerPrinter implements LifecycleListener {
         return (SupportFingerPrinterManagerFragment) activity.getFragmentManager().findFragmentByTag(TAG);
     }
 
-    public PublishSubject<Boolean> begin() {
+    public PublishSubject<IdentificationInfo> begin() {
         dispose();
         publishSubject = PublishSubject.create();
         if (Build.VERSION.SDK_INT < 23) {
-            publishSubject.onError(new FPerException(SYSTEM_API_ERROR));
+            publishSubject.onNext(new IdentificationInfo(SYSTEM_API_ERROR));
         } else {
             initManager();
             confirmFinger();
@@ -90,7 +91,7 @@ public class RxFingerPrinter implements LifecycleListener {
     public void startListening(FingerprintManager.CryptoObject cryptoObject) {
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.USE_FINGERPRINT)
                 != PackageManager.PERMISSION_GRANTED) {
-            publishSubject.onError(new FPerException(PERMISSION_DENIED_ERROE));
+            publishSubject.onNext(new IdentificationInfo(PERMISSION_DENIED_ERROE));
         }
         mCancellationSignal = new CancellationSignal();
         if (manager != null && authenticationCallback != null) {
@@ -108,7 +109,7 @@ public class RxFingerPrinter implements LifecycleListener {
             public void onAuthenticationError(int errorCode, CharSequence errString) {
                 //多次指纹密码验证错误后，进入此方法；并且，不能短时间内调用指纹验证
                 if (mCancellationSignal!=null){
-                    publishSubject.onError(new FPerException(FINGERPRINTERS_FAILED_ERROR));
+                    publishSubject.onNext(new IdentificationInfo(FINGERPRINTERS_FAILED_ERROR));
                     mCancellationSignal.cancel();
                     mSelfCompleted = true;
                 }
@@ -121,13 +122,13 @@ public class RxFingerPrinter implements LifecycleListener {
 
             @Override
             public void onAuthenticationSucceeded(FingerprintManager.AuthenticationResult result) {
-                publishSubject.onNext(true);
+                publishSubject.onNext(new IdentificationInfo(true));
                 mSelfCompleted = true;
             }
 
             @Override
             public void onAuthenticationFailed() {
-                publishSubject.onNext(false);
+                publishSubject.onNext(new IdentificationInfo(FINGERPRINTERS_RECOGNIZE_FAILED));
             }
         };
     }
@@ -139,30 +140,32 @@ public class RxFingerPrinter implements LifecycleListener {
         //android studio 上，没有这个会报错
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.USE_FINGERPRINT)
                 != PackageManager.PERMISSION_GRANTED) {
-            publishSubject.onError(new FPerException(PERMISSION_DENIED_ERROE));
+            publishSubject.onNext(new IdentificationInfo(PERMISSION_DENIED_ERROE));
         }
         //判断硬件是否支持指纹识别
         if (!manager.isHardwareDetected()) {
-            publishSubject.onError(new FPerException(HARDWARE_MISSIING_ERROR));
+            publishSubject.onNext(new IdentificationInfo(HARDWARE_MISSIING_ERROR));
         }
         //判断 是否开启锁屏密码
 
         if (!mKeyManager.isKeyguardSecure()) {
-            publishSubject.onError(new FPerException(KEYGUARDSECURE_MISSIING_ERROR));
+            publishSubject.onNext(new IdentificationInfo(KEYGUARDSECURE_MISSIING_ERROR));
         }
         //判断是否有指纹录入
         if (!manager.hasEnrolledFingerprints()) {
-            publishSubject.onError(new FPerException(NO_FINGERPRINTERS_ENROOLED_ERROR));
+            publishSubject.onNext(new IdentificationInfo(NO_FINGERPRINTERS_ENROOLED_ERROR));
         }
 
     }
 
     public void addDispose(Disposable disposable) {
-        mDisposables.add(disposable);
+        if(mDisposables != null){
+            mDisposables.add(disposable);
+        }
     }
 
     public void dispose() {
-        if(mDisposables.isDisposed()){
+        if(mDisposables != null && mDisposables.isDisposed()){
             mDisposables.dispose();
         }
     }

@@ -6,6 +6,7 @@ import static zwh.com.lib.CodeException.KEYGUARDSECURE_MISSIING_ERROR;
 import static zwh.com.lib.CodeException.NO_FINGERPRINTERS_ENROOLED_ERROR;
 import static zwh.com.lib.CodeException.PERMISSION_DENIED_ERROE;
 import static zwh.com.lib.CodeException.SYSTEM_API_ERROR;
+import static zwh.com.lib.CodeException.FINGERPRINTERS_RECOGNIZE_FAILED;
 
 /**
  * Created by Administrator on 2016/12/31.
@@ -49,6 +50,8 @@ public class FPerException extends RuntimeException {
                 return "没有指纹录入";
             case FINGERPRINTERS_FAILED_ERROR:
                 return "指纹认证失败，请稍后再试";
+            case FINGERPRINTERS_RECOGNIZE_FAILED:
+                return "指纹识别失败，请重试";
             default:
                 return "";
         }

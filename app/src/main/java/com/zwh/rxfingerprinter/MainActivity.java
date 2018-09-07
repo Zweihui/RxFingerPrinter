@@ -7,12 +7,13 @@ import android.widget.Toast;
 
 import io.reactivex.observers.DisposableObserver;
 import zwh.com.lib.FPerException;
+import zwh.com.lib.IdentificationInfo;
 import zwh.com.lib.RxFingerPrinter;
 
 public class MainActivity extends AppCompatActivity {
 
     private FingerPrinterView fingerPrinterView;
-    RxFingerPrinter rxfingerPrinter;
+    private RxFingerPrinter rxfingerPrinter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -20,12 +21,7 @@ public class MainActivity extends AppCompatActivity {
         fingerPrinterView = (FingerPrinterView) findViewById(R.id.fpv);
         fingerPrinterView.setOnStateChangedListener(new FingerPrinterView.OnStateChangedListener() {
             @Override public void onChange(int state) {
-                if (state == FingerPrinterView.STATE_CORRECT_PWD) {
-                    Toast.makeText(MainActivity.this, "指纹识别成功", Toast.LENGTH_SHORT).show();
-                }
                 if (state == FingerPrinterView.STATE_WRONG_PWD) {
-                    Toast.makeText(MainActivity.this, "指纹识别失败，请重试",
-                            Toast.LENGTH_SHORT).show();
                     fingerPrinterView.setState(FingerPrinterView.STATE_NO_SCANING);
                 }
             }
@@ -35,8 +31,8 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_open).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                DisposableObserver<Boolean> observer = new DisposableObserver<Boolean>() {
-
+                DisposableObserver<IdentificationInfo> observer =
+                        new DisposableObserver<IdentificationInfo>() {
                     @Override
                     protected void onStart() {
                         if (fingerPrinterView.getState() == FingerPrinterView.STATE_SCANING) {
@@ -51,9 +47,6 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onError(Throwable e) {
-                        if(e instanceof FPerException){
-                            Toast.makeText(MainActivity.this,((FPerException) e).getDisplayMessage(),Toast.LENGTH_SHORT).show();
-                        }
                     }
 
                     @Override
@@ -62,16 +55,22 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onNext(Boolean aBoolean) {
-                        if(aBoolean){
+                    public void onNext(IdentificationInfo info) {
+                        if(info.isSuccessful()){
                             fingerPrinterView.setState(FingerPrinterView.STATE_CORRECT_PWD);
+                            Toast.makeText(MainActivity.this, "指纹识别成功", Toast.LENGTH_SHORT).show();
                         }else{
+                            FPerException exception = info.getException();
+                            if (exception != null){
+                                Toast.makeText(MainActivity.this,exception.getDisplayMessage(),Toast.LENGTH_SHORT).show();
+                            }
                             fingerPrinterView.setState(FingerPrinterView.STATE_WRONG_PWD);
                         }
                     }
                 };
-                rxfingerPrinter.dispose();
-                rxfingerPrinter.begin().subscribe(observer);
+                rxfingerPrinter
+                        .begin()
+                        .subscribe(observer);
                 rxfingerPrinter.addDispose(observer);
             }
         });
