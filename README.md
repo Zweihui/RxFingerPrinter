@@ -19,10 +19,10 @@ repositories {
 ```
 在Module中build.gradle中配置 :
 
-[ ![Download](https://api.bintray.com/packages/zhangweihui0503/maven/RxFingerPrinter/images/download.svg?version=1.1.0) ](https://bintray.com/zhangweihui0503/maven/RxFingerPrinter/1.1.0/link)
+[ ![Download](https://api.bintray.com/packages/zhangweihui0503/maven/RxFingerPrinter/images/download.svg?version=1.2.0) ](https://bintray.com/zhangweihui0503/maven/RxFingerPrinter/1.2.0/link)
 ```gradle
 dependencies {
-    compile  'com.zwh:RxFingerPrinter:1.1.0'
+    compile  'com.zwh:RxFingerPrinter:1.2.0'
 }
 ```
 
@@ -37,8 +37,8 @@ RxFingerPrinter rxFingerPrinter = new RxFingerPrinter(this); // where this is an
 
 ```java
 // 可以在oncreat方法中执行
-DisposableObserver<Boolean> observer = new DisposableObserver<Boolean>() {
-
+DisposableObserver<IdentificationInfo> observer =
+                        new DisposableObserver<IdentificationInfo>() {
                     @Override
                     protected void onStart() {
                         
@@ -46,10 +46,7 @@ DisposableObserver<Boolean> observer = new DisposableObserver<Boolean>() {
 
                     @Override
                     public void onError(Throwable e) {
-                        //处理错误信息
-                        if(e instanceof FPerException){
-                            Toast.makeText(MainActivity.this,((FPerException) e).getDisplayMessage(),Toast.LENGTH_SHORT).show();
-                        }
+                    
                     }
 
                     @Override
@@ -58,11 +55,14 @@ DisposableObserver<Boolean> observer = new DisposableObserver<Boolean>() {
                     }
 
                     @Override
-                    public void onNext(Boolean aBoolean) {
-                        if(aBoolean){
-                            //指纹验证成功
-                        }else{
-                            //指纹验证失败
+                    public void onNext(IdentificationInfo info) {
+                        if(info.isSuccessful()){//识别成功
+                            Toast.makeText(MainActivity.this, "指纹识别成功", Toast.LENGTH_SHORT).show();
+                        }else{//识别识别
+                             FPerException exception = info.getException();
+                             if (exception != null){
+                                Toast.makeText(MainActivity.this,exception.getDisplayMessage(),Toast.LENGTH_SHORT).show();
+                             }
                         }
                     }
                 };
@@ -71,15 +71,17 @@ DisposableObserver<Boolean> observer = new DisposableObserver<Boolean>() {
 ```
 
 
-用FPerException封装了一下指纹识别时可能出现的异常，可以在订阅的Subscriber的`onError(Throwable e)`中获取该异常
+用FPerException封装了一下指纹识别时可能出现的异常，可以在订阅的Subscriber的`onNext(IdentificationInfo info)`中的`IdentificationInfo`获取该异常
 ```java
 @Override
-      public void onError(Throwable e) {
-          if(e instanceof FPerException){//判断该异常是否为FPerException
-            Toast.makeText(MainActivity.this,((FPerException) e).getDisplayMessage(),Toast.LENGTH_SHORT).show();
+      public void onNext(IdentificationInfo info) {
+          FPerException exception = info.getException();
+          if (exception != null){
+               Toast.makeText(MainActivity.this,exception.getDisplayMessage(),Toast.LENGTH_SHORT).show();
+           }
          }
 ```
-可以根据```((FPerException) e).getCode() ```来获取对应的错误码，也可以直接调用```((FPerException) e).getDisplayMessage()```提示默认的错误信息。
+可以根据```FPerException.getCode() ```来获取对应的错误码，也可以直接调用```FPerException.getDisplayMessage()```提示默认的错误信息。
 ```java
 public String getDisplayMessage() {
         switch (code) {
@@ -94,7 +96,9 @@ public String getDisplayMessage() {
             case NO_FINGERPRINTERS_ENROOLED_ERROR:
                 return "没有指纹录入";
             case FINGERPRINTERS_FAILED_ERROR:
-                return "指纹认证失败";
+                return "指纹认证失败，请稍后再试";
+            case FINGERPRINTERS_RECOGNIZE_FAILED:
+                return "指纹识别失败，请重试";
             default:
                 return "";
         }
