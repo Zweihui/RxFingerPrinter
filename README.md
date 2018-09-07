@@ -58,7 +58,7 @@ DisposableObserver<IdentificationInfo> observer =
                     public void onNext(IdentificationInfo info) {
                         if(info.isSuccessful()){//识别成功
                             Toast.makeText(MainActivity.this, "指纹识别成功", Toast.LENGTH_SHORT).show();
-                        }else{//识别识别
+                        }else{//识别失败 获取错误信息
                              FPerException exception = info.getException();
                              if (exception != null){
                                 Toast.makeText(MainActivity.this,exception.getDisplayMessage(),Toast.LENGTH_SHORT).show();
@@ -74,12 +74,12 @@ DisposableObserver<IdentificationInfo> observer =
 用FPerException封装了一下指纹识别时可能出现的异常，可以在订阅的Subscriber的`onNext(IdentificationInfo info)`中的`IdentificationInfo`获取该异常
 ```java
 @Override
-      public void onNext(IdentificationInfo info) {
-          FPerException exception = info.getException();
-          if (exception != null){
-               Toast.makeText(MainActivity.this,exception.getDisplayMessage(),Toast.LENGTH_SHORT).show();
-           }
-         }
+public void onNext(IdentificationInfo info) {
+    FPerException exception = info.getException();
+    if (exception != null){
+        Toast.makeText(MainActivity.this,exception.getDisplayMessage(),Toast.LENGTH_SHORT).show();
+    }
+}
 ```
 可以根据```FPerException.getCode() ```来获取对应的错误码，也可以直接调用```FPerException.getDisplayMessage()```提示默认的错误信息。
 ```java
