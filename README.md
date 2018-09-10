@@ -67,7 +67,6 @@ DisposableObserver<IdentificationInfo> observer =
                     }
                 };
                 rxfingerPrinter.begin().subscribe(observer);//RxfingerPrinter会自动在onPause()时暂停指纹监听，onResume()时恢复指纹监听)
-                rxfingerPrinter.addDispose(observer);//由RxfingerPrinter管理(会在onDestroy()生命周期时自动解除订阅)，已可以不调用该方法，自己解除订阅
 ```
 
 
