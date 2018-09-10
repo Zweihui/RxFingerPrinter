@@ -17,6 +17,7 @@ import android.util.Log;
 
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.observers.DisposableObserver;
 import io.reactivex.subjects.PublishSubject;
 import zwh.com.lib.lifecycle.LifecycleListener;
 import zwh.com.lib.lifecycle.SupportFingerPrinterManagerFragment;
@@ -73,18 +74,26 @@ public class RxFingerPrinter implements LifecycleListener {
         return (SupportFingerPrinterManagerFragment) activity.getFragmentManager().findFragmentByTag(TAG);
     }
 
-    public PublishSubject<IdentificationInfo> begin() {
+    public RxFingerPrinter begin() {
         dispose();
         publishSubject = PublishSubject.create();
+        return this;
+    }
+
+    public void subscribe(DisposableObserver<IdentificationInfo> observer){
+        if (observer == null){
+            throw new RuntimeException("Observer can not be null!");
+        }
+        publishSubject.subscribe(observer);
+        addDispose(observer);
         if (Build.VERSION.SDK_INT < 23) {
             publishSubject.onNext(new IdentificationInfo(SYSTEM_API_ERROR));
         } else {
             initManager();
-            confirmFinger();
-            startListening(null);
+            if (confirmFinger()){
+                startListening(null);
+            }
         }
-        return publishSubject;
-
     }
 
     @TargetApi(Build.VERSION_CODES.M)
@@ -135,27 +144,34 @@ public class RxFingerPrinter implements LifecycleListener {
 
     @SuppressLint("NewApi")
     @TargetApi(23)
-    public void confirmFinger() {
+    public boolean confirmFinger() {
+
+        boolean isDeviceSupport = true;
 
         //android studio 上，没有这个会报错
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.USE_FINGERPRINT)
                 != PackageManager.PERMISSION_GRANTED) {
             publishSubject.onNext(new IdentificationInfo(PERMISSION_DENIED_ERROE));
+            isDeviceSupport = false;
         }
         //判断硬件是否支持指纹识别
         if (!manager.isHardwareDetected()) {
             publishSubject.onNext(new IdentificationInfo(HARDWARE_MISSIING_ERROR));
+            isDeviceSupport = false;
         }
         //判断 是否开启锁屏密码
 
-        if (!mKeyManager.isKeyguardSecure()) {
+        if (mKeyManager.isKeyguardSecure()) {
             publishSubject.onNext(new IdentificationInfo(KEYGUARDSECURE_MISSIING_ERROR));
+            isDeviceSupport = false;
         }
         //判断是否有指纹录入
         if (!manager.hasEnrolledFingerprints()) {
             publishSubject.onNext(new IdentificationInfo(NO_FINGERPRINTERS_ENROOLED_ERROR));
+            isDeviceSupport = false;
         }
 
+        return isDeviceSupport;
     }
 
     public void addDispose(Disposable disposable) {

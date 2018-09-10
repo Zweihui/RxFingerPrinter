@@ -3,6 +3,7 @@ package com.zwh.rxfingerprinter;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import io.reactivex.observers.DisposableObserver;
@@ -14,11 +15,15 @@ public class MainActivity extends AppCompatActivity {
 
     private FingerPrinterView fingerPrinterView;
     private RxFingerPrinter rxfingerPrinter;
+    private DisposableObserver<IdentificationInfo> observer;
+    private Button mBtnOpen;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         fingerPrinterView = (FingerPrinterView) findViewById(R.id.fpv);
+        mBtnOpen = (Button) findViewById(R.id.btn_open);
         fingerPrinterView.setOnStateChangedListener(new FingerPrinterView.OnStateChangedListener() {
             @Override public void onChange(int state) {
                 if (state == FingerPrinterView.STATE_WRONG_PWD) {
@@ -28,11 +33,18 @@ public class MainActivity extends AppCompatActivity {
         });
         rxfingerPrinter = new RxFingerPrinter(this);
         rxfingerPrinter.setLogging(BuildConfig.DEBUG);
-        findViewById(R.id.btn_open).setOnClickListener(new View.OnClickListener() {
+        mBtnOpen.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                DisposableObserver<IdentificationInfo> observer =
-                        new DisposableObserver<IdentificationInfo>() {
+                enableButton(false);
+                createObserver();
+                rxfingerPrinter.begin().subscribe(observer);
+            }
+        });
+    }
+
+    private void createObserver(){
+        observer = new DisposableObserver<IdentificationInfo>() {
                     @Override
                     protected void onStart() {
                         if (fingerPrinterView.getState() == FingerPrinterView.STATE_SCANING) {
@@ -59,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
                         if(info.isSuccessful()){
                             fingerPrinterView.setState(FingerPrinterView.STATE_CORRECT_PWD);
                             Toast.makeText(MainActivity.this, "指纹识别成功", Toast.LENGTH_SHORT).show();
+                            enableButton(true);
                         }else{
                             FPerException exception = info.getException();
                             if (exception != null){
@@ -68,11 +81,10 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 };
-                rxfingerPrinter
-                        .begin()
-                        .subscribe(observer);
-                rxfingerPrinter.addDispose(observer);
-            }
-        });
+    }
+
+    private void enableButton(boolean enable){
+        mBtnOpen.setClickable(enable);
+        mBtnOpen.setEnabled(enable);
     }
 }
