@@ -37,7 +37,7 @@ publish {
     userOrg = 'zhangweihui0503'
     groupId = 'com.zwh'
     artifactId = 'RxFingerPrinter'
-    publishVersion = '1.2.0'
+    publishVersion = '1.2.1'
     desc = 'An Android fingerprinte library packaged by rxjava.'
     website = 'https://github.com/Zweihui/RxFingerPrinter'
     licences = ['Apache-2.0']

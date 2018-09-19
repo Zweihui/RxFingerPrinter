@@ -161,7 +161,7 @@ public class RxFingerPrinter implements LifecycleListener {
         }
         //判断 是否开启锁屏密码
 
-        if (mKeyManager.isKeyguardSecure()) {
+        if (!mKeyManager.isKeyguardSecure()) {
             publishSubject.onNext(new IdentificationInfo(KEYGUARDSECURE_MISSIING_ERROR));
             isDeviceSupport = false;
         }
