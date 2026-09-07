@@ -8,7 +8,7 @@
 
 ## Setup
 
-测试机型推荐android版本6.0以上且具有指纹模块。
+测试机型推荐android版本6.0以上且具有指纹模块
 
 在项目build.gradle中配置 :
 
